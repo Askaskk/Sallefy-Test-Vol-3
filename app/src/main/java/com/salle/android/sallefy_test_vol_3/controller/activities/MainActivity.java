@@ -1,6 +1,9 @@
 package com.salle.android.sallefy_test_vol_3.controller.activities;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -8,6 +11,9 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.MenuItem;
 
@@ -18,6 +24,8 @@ import com.salle.android.sallefy_test_vol_3.controller.fragments.ContentFragment
 import com.salle.android.sallefy_test_vol_3.controller.fragments.HomeFragment;
 import com.salle.android.sallefy_test_vol_3.controller.fragments.SearchFragment;
 import com.salle.android.sallefy_test_vol_3.controller.fragments.SongsFragment;
+import com.salle.android.sallefy_test_vol_3.utils.Constants;
+import com.salle.android.sallefy_test_vol_3.utils.Session;
 
 public class MainActivity extends FragmentActivity implements FragmentCallback {
 
@@ -32,6 +40,7 @@ public class MainActivity extends FragmentActivity implements FragmentCallback {
         setContentView(R.layout.activity_main);
         initViews();
         setInitialFragment();
+        requestPermissions();
     }
 
     private void initViews() {
@@ -67,6 +76,19 @@ public class MainActivity extends FragmentActivity implements FragmentCallback {
     private void setInitialFragment() {
         mTransaction.add(R.id.fragment_container, HomeFragment.getInstance());
         mTransaction.commit();
+    }
+
+    private void requestPermissions() {
+        if (ContextCompat.checkSelfPermission(getApplicationContext(),
+                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.RECORD_AUDIO,
+                            Manifest.permission.MODIFY_AUDIO_SETTINGS}, Constants.PERMISSIONS.MICROPHONE);
+
+        } else {
+            Session.getInstance(this).setAudioEnabled(true);
+        }
     }
 
     private void replaceFragment(Fragment fragment) {
@@ -109,7 +131,24 @@ public class MainActivity extends FragmentActivity implements FragmentCallback {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        System.out.println(requestCode);
+        if (requestCode == Constants.PERMISSIONS.MICROPHONE) {
+
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Session.getInstance(this).setAudioEnabled(true);
+            } else {
+            }
+            return;
+        }
+    }
+
+    @Override
     public void onChangeFragment(Fragment fragment) {
         replaceFragment(fragment);
     }
+
+
 }
