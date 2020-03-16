@@ -1,9 +1,14 @@
 package com.salle.android.sallefy_test_vol_3.controller.fragments;
 
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,15 +27,19 @@ import com.gauravk.audiovisualizer.visualizer.BarVisualizer;
 import com.salle.android.sallefy_test_vol_3.R;
 import com.salle.android.sallefy_test_vol_3.controller.adapters.TrackListAdapter;
 import com.salle.android.sallefy_test_vol_3.controller.callbacks.TrackListCallback;
+import com.salle.android.sallefy_test_vol_3.controller.music.MusicCallback;
+import com.salle.android.sallefy_test_vol_3.controller.music.MusicService;
 import com.salle.android.sallefy_test_vol_3.controller.restapi.callback.TrackCallback;
 import com.salle.android.sallefy_test_vol_3.controller.restapi.manager.TrackManager;
 import com.salle.android.sallefy_test_vol_3.model.Track;
+import com.salle.android.sallefy_test_vol_3.utils.Constants;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SongsFragment extends Fragment implements TrackListCallback, TrackCallback {
+public class SongsFragment extends Fragment
+        implements MusicCallback, TrackListCallback, TrackCallback {
 
     public static final String TAG = SongsFragment.class.getName();
     private static final String PLAY_VIEW = "PlayIcon";
@@ -49,12 +58,30 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
 
     private BarVisualizer mVisualizer;
     private int mDuration;
-
     private RecyclerView mRecyclerView;
 
-    private MediaPlayer mPlayer;
+    // Service
+    private MusicService mBoundService;
+    private boolean mServiceBound = false;
+
     private ArrayList<Track> mTracks;
     private int currentTrack = 0;
+
+
+    private ServiceConnection mServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            MusicService.MusicBinder binder = (MusicService.MusicBinder)service;
+            mBoundService = binder.getService();
+            mServiceBound = true;
+            updateSeekBar();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mServiceBound = false;
+        }
+    };
 
 
     public static SongsFragment getInstance() {
@@ -63,7 +90,9 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
 
     @Override
     public void onCreate(Bundle savedInstanceState){
+
         super.onCreate(savedInstanceState);
+        startStreamingService();
     }
 
     @Nullable
@@ -77,8 +106,34 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        if (mBoundService != null) {
+            if (mBoundService.isPlaying()) {
+                playAudio();
+            } else {
+                pauseAudio();
+            }
+        }
+    }
+
+
+    @Override
     public void onPause() {
         super.onPause();
+        if (mServiceBound) {
+            //pauseAudio();
+        }
+
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (mServiceBound) {
+            getActivity().unbindService(mServiceConnection);
+            mServiceBound = false;
+        }
     }
 
     @Override
@@ -98,21 +153,6 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
 
         mVisualizer = v.findViewById(R.id.dynamic_barVisualizer);
 
-        mPlayer = new MediaPlayer();
-        mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            @Override
-            public void onPrepared(MediaPlayer mp) {
-                mSeekBar.setMax(mPlayer.getDuration());
-                mDuration =  mPlayer.getDuration();
-                playAudio();
-
-                int audioSessionId = mPlayer.getAudioSessionId();
-                if (audioSessionId != -1)
-                    mVisualizer.setAudioSessionId(audioSessionId);
-            }
-        });
-
         mHandler = new Handler();
 
         tvAuthor = v.findViewById(R.id.dynamic_artist);
@@ -124,7 +164,7 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
             public void onClick(View v) {
                 currentTrack = ((currentTrack-1)%(mTracks.size()));
                 currentTrack = currentTrack < 0 ? (mTracks.size()-1):currentTrack;
-                updateTrack(mTracks.get(currentTrack));
+                updateTrack(currentTrack);
             }
         });
         btnForward = (ImageButton)v.findViewById(R.id.dynamic_forward_btn);
@@ -133,8 +173,7 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
             public void onClick(View v) {
                 currentTrack = ((currentTrack+1)%(mTracks.size()));
                 currentTrack = currentTrack >= mTracks.size() ? 0:currentTrack;
-
-                updateTrack(mTracks.get(currentTrack));
+                updateTrack(currentTrack);
             }
         });
 
@@ -157,11 +196,7 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser) {
-                    mPlayer.seekTo(progress);
-                }
-                if (mDuration > 0) {
-                    int newProgress = ((progress*100)/mDuration);
-                    System.out.println("New progress: " + newProgress);
+                    mBoundService.setCurrentDuration(progress);
                 }
             }
 
@@ -177,40 +212,33 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
         });
     }
 
+    private void startStreamingService () {
+        Intent intent = new Intent(getContext(), MusicService.class);
+        getActivity().bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
+    }
+
     private void playAudio() {
-        mPlayer.start();
+        if (!mBoundService.isPlaying()) { mBoundService.togglePlayer(); }
         updateSeekBar();
         btnPlayStop.setImageResource(R.drawable.ic_pause);
         btnPlayStop.setTag(STOP_VIEW);
-        //Toast.makeText(getApplicationContext(), "Playing Audio", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), "Playing Audio", Toast.LENGTH_SHORT).show();
     }
 
     private void pauseAudio() {
-        mPlayer.pause();
+        if (mBoundService.isPlaying()) { mBoundService.togglePlayer(); }
         btnPlayStop.setImageResource(R.drawable.ic_play);
         btnPlayStop.setTag(PLAY_VIEW);
-        //Toast.makeText(getApplicationContext(), "Pausing Audio", Toast.LENGTH_SHORT).show();
-    }
-
-    private void prepareMediaPlayer(final String url) {
-        Thread connection = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    mPlayer.setDataSource(url);
-                    mPlayer.prepare(); // might take long! (for buffering, etc)
-                } catch (IOException e) {
-                    Toast.makeText(getContext(),"Error, couldn't play the music\n" + e.getMessage(), Toast.LENGTH_LONG).show();
-                }
-            }
-        });
-        connection.start();
+        Toast.makeText(getContext(), "Pausing Audio", Toast.LENGTH_SHORT).show();
     }
 
     public void updateSeekBar() {
-        mSeekBar.setProgress(mPlayer.getCurrentPosition());
+        System.out.println("max duration: " + mBoundService.getMaxDuration());
+        System.out.println("progress:" + mBoundService.getCurrrentPosition());
+        mSeekBar.setMax(mBoundService.getMaxDuration());
+        mSeekBar.setProgress(mBoundService.getCurrrentPosition());
 
-        if(mPlayer.isPlaying()) {
+        if(mBoundService.isPlaying()) {
             mRunnable = new Runnable() {
                 @Override
                 public void run() {
@@ -221,26 +249,14 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
         }
     }
 
-    public void updateTrack(Track track) {
-        //updateSessionMusicData(offset);
+    public void updateTrack(int index) {
+        Track track = mTracks.get(index);
         tvAuthor.setText(track.getUserLogin());
         tvTitle.setText(track.getName());
-        try {
-            mPlayer.reset();
-            mPlayer.setDataSource(track.getUrl());
-            //mediaPlayer.pause();
-            mPlayer.prepare();
-        } catch(Exception e) {
-        }
-    }
-
-    public void updateSessionMusicData(int offset) {
-        /*int oldIndex = Session.getInstance(getApplicationContext()).getIndex();
-        int size = Session.getInstance(getApplicationContext()).getTracks().size();
-        int newIndex = (oldIndex + offset)%size;
-        Session.getInstance(getApplicationContext()).setIndex(newIndex);
-        Track newTrack = Session.getInstance(getApplicationContext()).getTracks().get(newIndex);
-        Session.getInstance(getApplicationContext()).setTrack(newTrack);*/
+        btnPlayStop.setImageResource(R.drawable.ic_pause);
+        btnPlayStop.setTag(STOP_VIEW);
+        mBoundService.playStream(mTracks, index);
+        updateSeekBar();
     }
 
     private void getData() {
@@ -254,6 +270,11 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
         TrackListAdapter adapter = new TrackListAdapter(this, getActivity(), mTracks);
         mRecyclerView.setAdapter(adapter);
     }
+
+
+    /**********************************************************************************************
+     *   *   *   *   *   *   *   *   TrackCallback   *   *   *   *   *   *   *   *   *
+     **********************************************************************************************/
 
     @Override
     public void onNoTracks(Throwable throwable) {
@@ -281,13 +302,25 @@ public class SongsFragment extends Fragment implements TrackListCallback, TrackC
     }
 
     @Override
-    public void onTrackSelected(Track track) {
-        updateTrack(track);
-    }
+    public void onTrackSelected(Track track) {}
 
     @Override
     public void onTrackSelected(int index) {
-        currentTrack = index;
-        updateTrack(mTracks.get(currentTrack));
+        updateTrack(index);
+    }
+
+
+    /**********************************************************************************************
+     *   *   *   *   *   *   *   *   MusicCallback   *   *   *   *   *   *   *   *   *
+     **********************************************************************************************/
+    @Override
+    public void onMusicPlayerPrepared() {
+        mSeekBar.setMax(mBoundService.getMaxDuration());
+        mDuration =  mBoundService.getMaxDuration();
+        playAudio();
+
+        int audioSessionId = mBoundService.getAudioSession();
+        if (audioSessionId != -1)
+            mVisualizer.setAudioSessionId(audioSessionId);
     }
 }
