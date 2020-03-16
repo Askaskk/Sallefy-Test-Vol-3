@@ -18,6 +18,8 @@ public class Session {
     private User mUser;
     private UserToken mUserToken;
 
+    private boolean audioEnabled;
+
     private Track mTrack;
     private Playlist mPlaylist;
     private ArrayList<Track> mTracks;
@@ -43,6 +45,7 @@ public class Session {
         this.mUser = null;
         this.mUserToken = null;
         this.isPlaying = false;
+        this.audioEnabled = false;
     }
 
     public void resetValues() {
@@ -68,6 +71,14 @@ public class Session {
 
     public void setUserToken(UserToken userToken) {
         mUserToken = userToken;
+    }
+
+    public boolean isAudioEnabled() {
+        return audioEnabled;
+    }
+
+    public void setAudioEnabled(boolean audioEnabled) {
+        this.audioEnabled = audioEnabled;
     }
 
     public Track getTrack() {
