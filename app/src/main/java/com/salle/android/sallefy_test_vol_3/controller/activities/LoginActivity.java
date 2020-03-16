@@ -18,6 +18,8 @@ import com.salle.android.sallefy_test_vol_3.model.UserToken;
 import com.salle.android.sallefy_test_vol_3.utils.PreferenceUtils;
 import com.salle.android.sallefy_test_vol_3.utils.Session;
 
+import java.util.List;
+
 public class LoginActivity extends AppCompatActivity implements UserCallback {
 
     private EditText etLogin;
@@ -105,6 +107,16 @@ public class LoginActivity extends AppCompatActivity implements UserCallback {
                 .setUser(userData);
         Intent intent= new Intent(this, MainActivity.class);
         startActivity(intent);
+    }
+
+    @Override
+    public void onUsersReceived(List<User> users) {
+
+    }
+
+    @Override
+    public void onUsersFailure(Throwable throwable) {
+
     }
 
     @Override
