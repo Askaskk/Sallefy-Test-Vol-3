@@ -13,6 +13,8 @@ import com.salle.android.sallefy_test_vol_3.model.UserToken;
 import com.salle.android.sallefy_test_vol_3.utils.Constants;
 import com.salle.android.sallefy_test_vol_3.utils.Session;
 
+import java.util.List;
+
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -129,6 +131,30 @@ public class UserManager {
             }
         });
     }
+
+
+    /********************   ALL USERS    ********************/
+    public synchronized void getUsers (final UserCallback userCallback) {
+        UserToken userToken = Session.getInstance(mContext).getUserToken();
+        Call<List<User>> call = mService.getAllUsers( "Bearer " + userToken.getIdToken());
+        call.enqueue(new Callback<List<User>>() {
+            @Override
+            public void onResponse(Call<List<User>> call, Response<List<User>> response) {
+                if (response.isSuccessful()) {
+                    userCallback.onUsersReceived(response.body());
+                } else {
+                    userCallback.onUsersFailure(new Throwable());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<User>> call, Throwable t) {
+                userCallback.onFailure(t);
+            }
+        });
+    }
+
+
 
 
     /********************   GETTERS / SETTERS    ********************/
