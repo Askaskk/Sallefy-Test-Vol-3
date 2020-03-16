@@ -22,7 +22,7 @@ public class MusicService extends Service {
     private AudioManager audioManager;
     private boolean playingBeforeInterruption = false;
 
-    private ArrayList<Track> mTracks;
+    private ArrayList<Track> mTracks = new ArrayList<>();
     private int currentTrack = 0;
 
     private MusicCallback mCallback;
@@ -85,6 +85,12 @@ public class MusicService extends Service {
                 @Override
                 public void onPrepared(MediaPlayer mp) {
                     mediaPlayer.start();
+                    System.out.println("Entra en el prepared");
+
+                    if (mCallback != null) {
+                        System.out.println("Entra en el callback");
+                        mCallback.onMusicPlayerPrepared();
+                    }
                 }
             });
         } catch(Exception e) {
@@ -123,6 +129,8 @@ public class MusicService extends Service {
                 @Override
                 public void onPrepared(MediaPlayer mp) {
                     mediaPlayer.start();
+                    mCallback.onMusicPlayerPrepared();
+
                 }
             });
         } catch(Exception e) {
@@ -132,6 +140,10 @@ public class MusicService extends Service {
 
     public int getAudioSession() {
         return mediaPlayer.getAudioSessionId();
+    }
+
+    public Track getCurrentTrack() {
+        return mTracks.size() > 0 ? mTracks.get(currentTrack):null;
     }
 
     public void updateTrack(int offset) {
@@ -190,6 +202,10 @@ public class MusicService extends Service {
         if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             mediaPlayer.start();
         }
+    }
+
+    public void setCallback(MusicCallback callback) {
+        mCallback = callback;
     }
 
     public void setCurrentDuration(int time) {
