@@ -3,13 +3,16 @@
     android:id="@+id/track_item_layout"
     android:orientation="horizontal" android:layout_width="match_parent"
     android:layout_height="@dimen/item_max_height2"
-    android:layout_margin="5dp"
+    android:layout_margin="0dp"
+    android:padding="0dp"
     android:gravity="center_vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_margin="5dp"
+        android:layout_marginStart="5dp"
+        android:layout_marginEnd="5dp"
+        android:layout_marginBottom="2dp"
         android:background="@drawable/back_round_dark"
         android:gravity="center_vertical"
         android:orientation="horizontal">
@@ -32,7 +35,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAlignment="textStart"
-                style="@style/SongTitleTheme"
+                style="@style/ItemTitleTheme"
                 android:text="@string/default_track_title"/>
 
             <TextView
