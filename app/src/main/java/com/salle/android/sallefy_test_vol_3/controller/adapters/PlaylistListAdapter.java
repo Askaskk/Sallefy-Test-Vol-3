@@ -24,18 +24,20 @@ public class PlaylistListAdapter extends RecyclerView.Adapter<PlaylistListAdapte
     private ArrayList<Playlist> mPlaylists;
     private Context mContext;
     private PlaylistAdapterCallback mCallback;
+    private int layoutId;
 
 
-    public PlaylistListAdapter(ArrayList<Playlist> playlists, Context context, PlaylistAdapterCallback callback) {
+    public PlaylistListAdapter(ArrayList<Playlist> playlists, Context context, PlaylistAdapterCallback callback, int layoutId) {
         mPlaylists = playlists;
         mContext = context;
         mCallback = callback;
+        this.layoutId = layoutId;
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View itemView = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_playlist, parent, false);
+        View itemView = LayoutInflater.from(parent.getContext()).inflate(layoutId, parent, false);
         return new PlaylistListAdapter.ViewHolder(itemView);
     }
 
@@ -45,7 +47,8 @@ public class PlaylistListAdapter extends RecyclerView.Adapter<PlaylistListAdapte
             holder.mLayout.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mCallback.onPlaylistClick(mPlaylists.get(position));
+                    if (mCallback != null)
+                        mCallback.onPlaylistClick(mPlaylists.get(position));
                 }
             });
             holder.mTitle.setText(mPlaylists.get(position).getName());
