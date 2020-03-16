@@ -4,7 +4,7 @@ public class Constants {
     public static final String URL = "url";
 
     public interface CALLBACKS {
-        public static int DELETE_SONG_FROM_PLAYLIST = 1;
+        public static String MUSIC_CALLBACK = "musicCallback";
     }
 
     public interface NETWORK {
