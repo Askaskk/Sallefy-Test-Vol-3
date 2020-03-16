@@ -13,6 +13,10 @@ public class Constants {
         public static int LOGIN_KO = 2;
     }
 
+    public interface PERMISSIONS {
+        public static int MICROPHONE = 7;
+    }
+
     public interface SENDING {
         public static String PLAYLIST = "sendingPlaylist";
         public static String INDEX = "sendingIndex";
