@@ -52,7 +52,7 @@ public class HomeFragment extends Fragment implements PlaylistAdapterCallback, P
 
     private void initViews(View v) {
         GridLayoutManager mGridLayoutManager = new GridLayoutManager(getActivity(), 2);
-        mAdapter = new PlaylistListAdapter(null, getContext(), this);
+        mAdapter = new PlaylistListAdapter(null, getContext(), this, R.layout.item_playlist);
         mRecyclerView = (RecyclerView) v.findViewById(R.id.home_recyclerview);
         mRecyclerView.setLayoutManager(mGridLayoutManager);
         mRecyclerView.setAdapter(mAdapter);
@@ -88,9 +88,9 @@ public class HomeFragment extends Fragment implements PlaylistAdapterCallback, P
 
     @Override
     public void onAllList(ArrayList<Playlist> playlists) {
-        mAdapter = new PlaylistListAdapter(playlists, getContext(), this);
+        mAdapter = new PlaylistListAdapter(playlists, getContext(), this, R.layout.item_playlist);
         mRecyclerView.setAdapter(mAdapter);
-        Toast.makeText(getContext(), "Playlists received", Toast.LENGTH_LONG).show();
+        //Toast.makeText(getContext(), "Playlists received", Toast.LENGTH_LONG).show();
     }
 
     @Override
