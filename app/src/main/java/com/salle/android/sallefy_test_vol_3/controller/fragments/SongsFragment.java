@@ -23,7 +23,6 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.gauravk.audiovisualizer.visualizer.BarVisualizer;
 import com.salle.android.sallefy_test_vol_3.R;
 import com.salle.android.sallefy_test_vol_3.controller.adapters.TrackListAdapter;
 import com.salle.android.sallefy_test_vol_3.controller.callbacks.TrackListCallback;
@@ -33,6 +32,7 @@ import com.salle.android.sallefy_test_vol_3.controller.restapi.callback.TrackCal
 import com.salle.android.sallefy_test_vol_3.controller.restapi.manager.TrackManager;
 import com.salle.android.sallefy_test_vol_3.model.Track;
 import com.salle.android.sallefy_test_vol_3.utils.Constants;
+import com.salle.android.sallefy_test_vol_3.utils.Session;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -56,7 +56,6 @@ public class SongsFragment extends Fragment
     private Handler mHandler;
     private Runnable mRunnable;
 
-    private BarVisualizer mVisualizer;
     private int mDuration;
     private RecyclerView mRecyclerView;
 
@@ -73,6 +72,7 @@ public class SongsFragment extends Fragment
         public void onServiceConnected(ComponentName name, IBinder service) {
             MusicService.MusicBinder binder = (MusicService.MusicBinder)service;
             mBoundService = binder.getService();
+            mBoundService.setCallback(SongsFragment.this);
             mServiceBound = true;
             updateSeekBar();
         }
@@ -109,6 +109,7 @@ public class SongsFragment extends Fragment
     public void onResume() {
         super.onResume();
         if (mBoundService != null) {
+            resumeSongText();
             if (mBoundService.isPlaying()) {
                 playAudio();
             } else {
@@ -139,8 +140,6 @@ public class SongsFragment extends Fragment
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (mVisualizer != null)
-            mVisualizer.release();
     }
 
     private void initViews(View v) {
@@ -150,8 +149,6 @@ public class SongsFragment extends Fragment
         TrackListAdapter adapter = new TrackListAdapter(this, getActivity(), null);
         mRecyclerView.setLayoutManager(manager);
         mRecyclerView.setAdapter(adapter);
-
-        mVisualizer = v.findViewById(R.id.dynamic_barVisualizer);
 
         mHandler = new Handler();
 
@@ -249,14 +246,34 @@ public class SongsFragment extends Fragment
         }
     }
 
-    public void updateTrack(int index) {
+    private void updateTrack(int index) {
         Track track = mTracks.get(index);
+        currentTrack = index;
         tvAuthor.setText(track.getUserLogin());
         tvTitle.setText(track.getName());
+        mBoundService.playStream(mTracks, index);
         btnPlayStop.setImageResource(R.drawable.ic_pause);
         btnPlayStop.setTag(STOP_VIEW);
-        mBoundService.playStream(mTracks, index);
-        updateSeekBar();
+        //updateSeekBar();
+    }
+
+
+    private void resumeSongView(boolean isPlaying) {
+        if (isPlaying) {
+            btnPlayStop.setImageResource(R.drawable.ic_pause);
+            btnPlayStop.setTag(STOP_VIEW);
+        } else {
+            btnPlayStop.setImageResource(R.drawable.ic_play);
+            btnPlayStop.setTag(PLAY_VIEW);
+        }
+    }
+
+    private void resumeSongText() {
+        Track track = mBoundService.getCurrentTrack();
+        if (track != null) {
+            tvAuthor.setText(track.getUserLogin());
+            tvTitle.setText(track.getName());
+        }
     }
 
     private void getData() {
@@ -306,6 +323,7 @@ public class SongsFragment extends Fragment
 
     @Override
     public void onTrackSelected(int index) {
+        System.out.println("Index song: " + index);
         updateTrack(index);
     }
 
@@ -315,12 +333,10 @@ public class SongsFragment extends Fragment
      **********************************************************************************************/
     @Override
     public void onMusicPlayerPrepared() {
+        System.out.println("Entra en el prepared");
         mSeekBar.setMax(mBoundService.getMaxDuration());
         mDuration =  mBoundService.getMaxDuration();
         playAudio();
 
-        int audioSessionId = mBoundService.getAudioSession();
-        if (audioSessionId != -1)
-            mVisualizer.setAudioSessionId(audioSessionId);
     }
 }
